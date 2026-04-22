@@ -137,6 +137,9 @@ const whiteboard = {
         });
 
         _this.mousedown = function (e) {
+            if (e.button === 2) {
+                return;
+            }
             if (_this.imgDragActive || _this.drawFlag) {
                 return;
             }
@@ -1961,7 +1964,8 @@ const whiteboard = {
         if (_this.userChatBubbles[username]) {
             _this.userChatBubbles[username].remove();
         }
-        var $userBadge = _this.cursorContainer.find("." + username);
+        var escapedUsername = $.escapeSelector(username);
+        var $userBadge = _this.cursorContainer.find("." + escapedUsername);
         if ($userBadge.length === 0) {
             return;
         }

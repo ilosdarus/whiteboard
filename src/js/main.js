@@ -69,6 +69,10 @@ function main() {
             InfoService.incrementNbMessagesReceived();
         });
 
+        signaling_socket.on("chatMessage", function (content) {
+            whiteboard.handleChatMessage(content);
+        });
+
         signaling_socket.on("refreshUserBadges", function () {
             whiteboard.refreshUserBadges();
         });
@@ -321,11 +325,32 @@ function initWhiteboard() {
                 } else {
                     $("#textboxBackgroundColorPickerBtn").hide();
                 }
+
+                if (["rect", "circle", "triangle", "star"].includes(activeTool)) {
+                    $("#fillToggleBtn").show();
+                    if (whiteboard.fillEnabled) {
+                        $("#fillToggleBtn").addClass("active");
+                    } else {
+                        $("#fillToggleBtn").removeClass("active");
+                    }
+                } else {
+                    $("#fillToggleBtn").hide();
+                }
+
                 let savedThickness = localStorage.getItem("item_thickness_" + activeTool);
                 if (savedThickness) {
                     whiteboard.setStrokeThickness(savedThickness);
                     $("#whiteboardThicknessSlider").val(savedThickness);
                 }
+            });
+
+        // Fill toggle button
+        $("#fillToggleBtn")
+            .off("click")
+            .click(function () {
+                if (ReadOnlyService.readOnlyActive) return;
+                whiteboard.fillEnabled = !whiteboard.fillEnabled;
+                $(this).toggleClass("active", whiteboard.fillEnabled);
             });
 
         // upload image button
@@ -559,6 +584,69 @@ function initWhiteboard() {
             .click(() => {
                 InfoService.toggleDisplayInfo();
             });
+
+        $("#displayChatBtn")
+            .off("click")
+            .click(() => {
+                $("#chatContainer").toggleClass("displayNone");
+                $("#displayChatBtn").toggleClass("active");
+                if (!$("#chatContainer").hasClass("displayNone")) {
+                    whiteboard.updateChatMessagesList();
+                }
+            });
+
+        var chatInputPosition = { x: 0, y: 0 };
+        $(document).on("contextmenu", function (e) {
+            if (ReadOnlyService.readOnlyActive) return;
+            e.preventDefault();
+            chatInputPosition = { x: e.pageX, y: e.pageY };
+            $("#chatInputContainer").css({
+                left: e.pageX + "px",
+                top: e.pageY + "px",
+            });
+            $("#chatInputContainer").removeClass("displayNone");
+            $("#chatInputText").focus();
+        });
+
+        $("#cancelChatBtn")
+            .off("click")
+            .click(function () {
+                $("#chatInputContainer").addClass("displayNone");
+                $("#chatInputText").val("");
+            });
+
+        $("#sendChatBtn")
+            .off("click")
+            .click(function () {
+                if (ReadOnlyService.readOnlyActive) return;
+                var message = $("#chatInputText").val().trim();
+                if (message) {
+                    signaling_socket.emit("chatMessage", {
+                        t: "chat",
+                        message: message,
+                        timestamp: Date.now(),
+                        wid: whiteboardId,
+                        at: accessToken,
+                    });
+                    whiteboard.handleChatMessage({
+                        username: btoa(encodeURIComponent(myUsername)),
+                        message: message,
+                        timestamp: Date.now(),
+                    });
+                }
+                $("#chatInputContainer").addClass("displayNone");
+                $("#chatInputText").val("");
+            });
+
+        $("#chatInputText").on("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                $("#sendChatBtn").click();
+            }
+            if (e.key === "Escape") {
+                $("#cancelChatBtn").click();
+            }
+        });
 
         var btnsMini = false;
         $("#minMaxBtn")

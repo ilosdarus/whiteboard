@@ -369,6 +369,24 @@ export default function startBackendServer(port) {
             }
         });
 
+        socket.on("chatMessage", function (content) {
+            if (!whiteboardId) return;
+
+            content = escapeAllContentStrings(content);
+
+            if (accessToken === "" || accessToken == content["at"]) {
+                const broadcastTo = (wid) =>
+                    socket.compress(false).broadcast.to(wid).emit("chatMessage", content);
+                // broadcast to current whiteboard
+                broadcastTo(whiteboardId);
+                // broadcast the same content to the associated read-only whiteboard
+                const readOnlyId = ReadOnlyBackendService.getReadOnlyId(whiteboardId);
+                broadcastTo(readOnlyId);
+            } else {
+                socket.emit("wrongAccessToken", true);
+            }
+        });
+
         socket.on("joinWhiteboard", function (content) {
             content = escapeAllContentStrings(content);
             if (accessToken === "" || accessToken == content["at"]) {

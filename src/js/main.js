@@ -648,6 +648,10 @@ function initWhiteboard() {
             }
         });
 
+        $("#chatInputContainer").on("mouseenter", function () {
+            whiteboard.triggerMouseOver();
+        });
+
         var btnsMini = false;
         $("#minMaxBtn")
             .off("click")

@@ -278,7 +278,13 @@ const whiteboard = {
         });
 
         _this.mouseup = function (e) {
+            if (e.button === 2) {
+                return;
+            }
             if (_this.imgDragActive) {
+                return;
+            }
+            if (!_this.drawFlag) {
                 return;
             }
             if (ReadOnlyService.readOnlyActive && _this.tool !== "hand") return;
@@ -1964,9 +1970,25 @@ const whiteboard = {
         if (_this.userChatBubbles[username]) {
             _this.userChatBubbles[username].remove();
         }
-        var escapedUsername = $.escapeSelector(username);
-        var $userBadge = _this.cursorContainer.find("." + escapedUsername);
-        if ($userBadge.length === 0) {
+        var $targetElement = null;
+        if (username === _this.settings.username) {
+            if (_this.ownCursor && _this.ownCursor.length > 0) {
+                $targetElement = _this.ownCursor;
+            } else {
+                var escapedUsername = $.escapeSelector(username);
+                var $userBadge = _this.cursorContainer.find("." + escapedUsername);
+                if ($userBadge.length > 0) {
+                    $targetElement = $userBadge;
+                }
+            }
+        } else {
+            var escapedUsername = $.escapeSelector(username);
+            var $userBadge = _this.cursorContainer.find("." + escapedUsername);
+            if ($userBadge.length > 0) {
+                $targetElement = $userBadge;
+            }
+        }
+        if (!$targetElement) {
             return;
         }
         var bubbleHtml =
@@ -1981,7 +2003,7 @@ const whiteboard = {
             '<div style="width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:5px solid #fff; position:absolute; bottom:-5px; left:11px;"></div>' +
             "</div>";
         var $bubble = $(bubbleHtml);
-        $userBadge.append($bubble);
+        $targetElement.append($bubble);
         _this.userChatBubbles[username] = $bubble;
         $bubble.css({
             top: "-" + ($bubble.outerHeight() + 10) + "px",

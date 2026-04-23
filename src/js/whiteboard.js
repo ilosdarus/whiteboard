@@ -18,6 +18,9 @@ const whiteboard = {
     previousToolHtmlElem: null, // useful for handling read-only mode
     tool: "mouse",
     thickness: 4,
+    fillEnabled: false, // 实心/空心切换状态
+    chatMessages: [], // 聊天消息列表
+    userChatBubbles: {}, // 用户聊天气泡
     /**
      * @type Point
      */
@@ -204,6 +207,15 @@ const whiteboard = {
                 _this.svgCirle.setAttribute("r", 0);
                 _this.svgContainer.append(_this.svgCirle);
                 _this.startCoords = currentPos;
+            } else if (_this.tool === "triangle" || _this.tool === "star") {
+                _this.svgContainer.find("polygon").remove();
+                _this.svgPolygon = document.createElementNS(svgns, "polygon");
+                _this.svgPolygon.setAttribute("stroke", "gray");
+                _this.svgPolygon.setAttribute("stroke-dasharray", "5, 5");
+                _this.svgPolygon.setAttribute("style", "fill-opacity:0.0;");
+                _this.svgPolygon.setAttribute("points", "");
+                _this.svgContainer.append(_this.svgPolygon);
+                _this.startCoords = currentPos;
             }
 
             _this.prevPos = currentPos;
@@ -331,6 +343,8 @@ const whiteboard = {
                     currentPos.y,
                     _this.drawcolor,
                     _this.thickness,
+                    false,
+                    _this.fillEnabled,
                 );
                 _this.sendFunction({
                     t: _this.tool,
@@ -342,6 +356,7 @@ const whiteboard = {
                     ],
                     c: _this.drawcolor,
                     th: _this.thickness,
+                    f: _this.fillEnabled,
                 });
                 _this.svgContainer.find("rect").remove();
             } else if (_this.tool === "circle") {
@@ -352,6 +367,8 @@ const whiteboard = {
                     r,
                     _this.drawcolor,
                     _this.thickness,
+                    false,
+                    _this.fillEnabled,
                 );
                 _this.sendFunction({
                     t: _this.tool,
@@ -362,8 +379,91 @@ const whiteboard = {
                     ],
                     c: _this.drawcolor,
                     th: _this.thickness,
+                    f: _this.fillEnabled,
                 });
                 _this.svgContainer.find("circle").remove();
+            } else if (_this.tool === "triangle") {
+                if (_this.pressedKeys.shift) {
+                    if (
+                        (currentPos.x - _this.startCoords.x) *
+                            (currentPos.y - _this.startCoords.y) >
+                        0
+                    ) {
+                        currentPos = new Point(
+                            currentPos.x,
+                            _this.startCoords.y + (currentPos.x - _this.startCoords.x),
+                        );
+                    } else {
+                        currentPos = new Point(
+                            currentPos.x,
+                            _this.startCoords.y - (currentPos.x - _this.startCoords.x),
+                        );
+                    }
+                }
+                _this.drawTriangle(
+                    _this.startCoords.x,
+                    _this.startCoords.y,
+                    currentPos.x,
+                    currentPos.y,
+                    _this.drawcolor,
+                    _this.thickness,
+                    false,
+                    _this.fillEnabled,
+                );
+                _this.sendFunction({
+                    t: _this.tool,
+                    d: [
+                        _this.startCoords.x - _this.viewCoords.x,
+                        _this.startCoords.y - _this.viewCoords.y,
+                        currentPos.x - _this.viewCoords.x,
+                        currentPos.y - _this.viewCoords.y,
+                    ],
+                    c: _this.drawcolor,
+                    th: _this.thickness,
+                    f: _this.fillEnabled,
+                });
+                _this.svgContainer.find("polygon").remove();
+            } else if (_this.tool === "star") {
+                if (_this.pressedKeys.shift) {
+                    if (
+                        (currentPos.x - _this.startCoords.x) *
+                            (currentPos.y - _this.startCoords.y) >
+                        0
+                    ) {
+                        currentPos = new Point(
+                            currentPos.x,
+                            _this.startCoords.y + (currentPos.x - _this.startCoords.x),
+                        );
+                    } else {
+                        currentPos = new Point(
+                            currentPos.x,
+                            _this.startCoords.y - (currentPos.x - _this.startCoords.x),
+                        );
+                    }
+                }
+                _this.drawStar(
+                    _this.startCoords.x,
+                    _this.startCoords.y,
+                    currentPos.x,
+                    currentPos.y,
+                    _this.drawcolor,
+                    _this.thickness,
+                    false,
+                    _this.fillEnabled,
+                );
+                _this.sendFunction({
+                    t: _this.tool,
+                    d: [
+                        _this.startCoords.x - _this.viewCoords.x,
+                        _this.startCoords.y - _this.viewCoords.y,
+                        currentPos.x - _this.viewCoords.x,
+                        currentPos.y - _this.viewCoords.y,
+                    ],
+                    c: _this.drawcolor,
+                    th: _this.thickness,
+                    f: _this.fillEnabled,
+                });
+                _this.svgContainer.find("polygon").remove();
             } else if (_this.tool === "recSelect") {
                 _this.imgDragActive = true;
                 if (_this.pressedKeys.shift) {
@@ -607,6 +707,74 @@ const whiteboard = {
                 if (_this.svgCirle) {
                     _this.svgCirle.setAttribute("r", r);
                 }
+            } else if (_this.tool === "triangle") {
+                if (_this.svgPolygon && _this.drawFlag) {
+                    let posToUse = currentPos;
+                    if (_this.pressedKeys.shift) {
+                        if (
+                            (currentPos.x - _this.startCoords.x) *
+                                (currentPos.y - _this.startCoords.y) >
+                            0
+                        ) {
+                            posToUse = new Point(
+                                currentPos.x,
+                                _this.startCoords.y + (currentPos.x - _this.startCoords.x),
+                            );
+                        } else {
+                            posToUse = new Point(
+                                currentPos.x,
+                                _this.startCoords.y - (currentPos.x - _this.startCoords.x),
+                            );
+                        }
+                    }
+                    const width = Math.abs(posToUse.x - _this.startCoords.x);
+                    const height = Math.abs(posToUse.y - _this.startCoords.y);
+                    const left =
+                        posToUse.x < _this.startCoords.x ? posToUse.x : _this.startCoords.x;
+                    const top = posToUse.y < _this.startCoords.y ? posToUse.y : _this.startCoords.y;
+                    const p1x = left + width / 2;
+                    const p1y = top;
+                    const p2x = left;
+                    const p2y = top + height;
+                    const p3x = left + width;
+                    const p3y = top + height;
+                    _this.svgPolygon.setAttribute(
+                        "points",
+                        `${p1x},${p1y} ${p2x},${p2y} ${p3x},${p3y}`,
+                    );
+                }
+            } else if (_this.tool === "star") {
+                if (_this.svgPolygon && _this.drawFlag) {
+                    let posToUse = currentPos;
+                    if (_this.pressedKeys.shift) {
+                        if (
+                            (currentPos.x - _this.startCoords.x) *
+                                (currentPos.y - _this.startCoords.y) >
+                            0
+                        ) {
+                            posToUse = new Point(
+                                currentPos.x,
+                                _this.startCoords.y + (currentPos.x - _this.startCoords.x),
+                            );
+                        } else {
+                            posToUse = new Point(
+                                currentPos.x,
+                                _this.startCoords.y - (currentPos.x - _this.startCoords.x),
+                            );
+                        }
+                    }
+                    const width = Math.abs(posToUse.x - _this.startCoords.x);
+                    const height = Math.abs(posToUse.y - _this.startCoords.y);
+                    const size = Math.min(width, height) / 2;
+                    const cx =
+                        (posToUse.x < _this.startCoords.x ? posToUse.x : _this.startCoords.x) +
+                        width / 2;
+                    const cy =
+                        (posToUse.y < _this.startCoords.y ? posToUse.y : _this.startCoords.y) +
+                        height / 2;
+                    const points = _this.getStarPoints(cx, cy, size, size / 2, 5);
+                    _this.svgPolygon.setAttribute("points", points);
+                }
             }
 
             _this.prevPos = currentPos;
@@ -823,7 +991,7 @@ const whiteboard = {
         _this.ctx.closePath();
         _this.ctx.globalCompositeOperation = _this.oldGCO;
     },
-    drawRec: function (fromX, fromY, toX, toY, color, thickness, remote) {
+    drawRec: function (fromX, fromY, toX, toY, color, thickness, remote, filled) {
         var _this = this;
         let xOffset = remote ? _this.viewCoords.x : 0;
         let yOffset = remote ? _this.viewCoords.y : 0;
@@ -831,21 +999,106 @@ const whiteboard = {
         toY = toY - fromY - yOffset;
         _this.ctx.beginPath();
         _this.ctx.rect(fromX + xOffset, fromY + yOffset, toX + xOffset, toY + yOffset);
-        _this.ctx.strokeStyle = color;
-        _this.ctx.lineWidth = thickness;
-        _this.ctx.lineCap = _this.lineCap;
-        _this.ctx.stroke();
+        if (filled) {
+            _this.ctx.fillStyle = color;
+            _this.ctx.fill();
+        } else {
+            _this.ctx.strokeStyle = color;
+            _this.ctx.lineWidth = thickness;
+            _this.ctx.lineCap = _this.lineCap;
+            _this.ctx.stroke();
+        }
         _this.ctx.closePath();
     },
-    drawCircle: function (fromX, fromY, radius, color, thickness, remote) {
+    drawCircle: function (fromX, fromY, radius, color, thickness, remote, filled) {
         var _this = this;
         let xOffset = remote ? _this.viewCoords.x : 0;
         let yOffset = remote ? _this.viewCoords.y : 0;
         _this.ctx.beginPath();
         _this.ctx.arc(fromX + xOffset, fromY + yOffset, radius, 0, 2 * Math.PI, false);
-        _this.ctx.lineWidth = thickness;
-        _this.ctx.strokeStyle = color;
-        _this.ctx.stroke();
+        if (filled) {
+            _this.ctx.fillStyle = color;
+            _this.ctx.fill();
+        } else {
+            _this.ctx.lineWidth = thickness;
+            _this.ctx.strokeStyle = color;
+            _this.ctx.stroke();
+        }
+    },
+    getStarPoints: function (cx, cy, outerRadius, innerRadius, points) {
+        var result = [];
+        var angle = Math.PI / points;
+        for (var i = 0; i < 2 * points; i++) {
+            var r = i % 2 === 0 ? outerRadius : innerRadius;
+            var x = cx + r * Math.cos(i * angle - Math.PI / 2);
+            var y = cy + r * Math.sin(i * angle - Math.PI / 2);
+            result.push(x + "," + y);
+        }
+        return result.join(" ");
+    },
+    drawTriangle: function (fromX, fromY, toX, toY, color, thickness, remote, filled) {
+        var _this = this;
+        let xOffset = remote ? _this.viewCoords.x : 0;
+        let yOffset = remote ? _this.viewCoords.y : 0;
+        const width = Math.abs(toX - fromX);
+        const height = Math.abs(toY - fromY);
+        const left = Math.min(fromX, toX) + xOffset;
+        const top = Math.min(fromY, toY) + yOffset;
+        const p1x = left + width / 2;
+        const p1y = top;
+        const p2x = left;
+        const p2y = top + height;
+        const p3x = left + width;
+        const p3y = top + height;
+        _this.ctx.beginPath();
+        _this.ctx.moveTo(p1x, p1y);
+        _this.ctx.lineTo(p2x, p2y);
+        _this.ctx.lineTo(p3x, p3y);
+        _this.ctx.closePath();
+        if (filled) {
+            _this.ctx.fillStyle = color;
+            _this.ctx.fill();
+        } else {
+            _this.ctx.strokeStyle = color;
+            _this.ctx.lineWidth = thickness;
+            _this.ctx.lineCap = _this.lineCap;
+            _this.ctx.stroke();
+        }
+    },
+    drawStar: function (fromX, fromY, toX, toY, color, thickness, remote, filled) {
+        var _this = this;
+        let xOffset = remote ? _this.viewCoords.x : 0;
+        let yOffset = remote ? _this.viewCoords.y : 0;
+        const width = Math.abs(toX - fromX);
+        const height = Math.abs(toY - fromY);
+        const size = Math.min(width, height) / 2;
+        const cx = Math.min(fromX, toX) + width / 2 + xOffset;
+        const cy = Math.min(fromY, toY) + height / 2 + yOffset;
+        const outerRadius = size;
+        const innerRadius = size / 2;
+        const points = 5;
+        var angle = Math.PI / points;
+        _this.ctx.beginPath();
+        for (var i = 0; i < 2 * points; i++) {
+            var r = i % 2 === 0 ? outerRadius : innerRadius;
+            var x = cx + r * Math.cos(i * angle - Math.PI / 2);
+            var y = cy + r * Math.sin(i * angle - Math.PI / 2);
+            if (i === 0) {
+                _this.ctx.moveTo(x, y);
+            } else {
+                _this.ctx.lineTo(x, y);
+            }
+        }
+        _this.ctx.closePath();
+        if (filled) {
+            _this.ctx.fillStyle = color;
+            _this.ctx.fill();
+        } else {
+            _this.ctx.strokeStyle = color;
+            _this.ctx.lineWidth = thickness;
+            _this.ctx.lineCap = _this.lineCap;
+            _this.ctx.stroke();
+        }
     },
     clearWhiteboard: function () {
         var _this = this;
@@ -1328,6 +1581,7 @@ const whiteboard = {
         var color = content["c"];
         var username = content["username"];
         var thickness = content["th"];
+        var filled = content["f"];
 
         window.requestAnimationFrame(function () {
             if (tool === "line" || tool === "pen") {
@@ -1338,9 +1592,22 @@ const whiteboard = {
                     _this.drawPenSmoothLine(data, color, thickness, true);
                 }
             } else if (tool === "rect") {
-                _this.drawRec(data[0], data[1], data[2], data[3], color, thickness, true);
+                _this.drawRec(data[0], data[1], data[2], data[3], color, thickness, true, filled);
             } else if (tool === "circle") {
-                _this.drawCircle(data[0], data[1], data[2], color, thickness, true);
+                _this.drawCircle(data[0], data[1], data[2], color, thickness, true, filled);
+            } else if (tool === "triangle") {
+                _this.drawTriangle(
+                    data[0],
+                    data[1],
+                    data[2],
+                    data[3],
+                    color,
+                    thickness,
+                    true,
+                    filled,
+                );
+            } else if (tool === "star") {
+                _this.drawStar(data[0], data[1], data[2], data[3], color, thickness, true, filled);
             } else if (tool === "eraser") {
                 _this.drawEraserLine(data[0], data[1], data[2], data[3], thickness, true);
             } else if (tool === "eraseRec") {
@@ -1615,6 +1882,8 @@ const whiteboard = {
                 "pen",
                 "rect",
                 "circle",
+                "triangle",
+                "star",
                 "eraser",
                 "addImgBG",
                 "recSelect",
@@ -1642,6 +1911,86 @@ const whiteboard = {
             //Line, Rec, Circle, Cutting
             _this.mouseOverlay.css({ cursor: "crosshair" });
         }
+    },
+    handleChatMessage: function (content) {
+        var _this = this;
+        var username = content["username"];
+        var message = content["message"];
+        var timestamp = content["timestamp"] || Date.now();
+        var decodedUsername = "";
+        try {
+            decodedUsername = decodeURIComponent(atob(username));
+        } catch (e) {
+            decodedUsername = username;
+        }
+        _this.chatMessages.push({
+            username: decodedUsername,
+            message: message,
+            timestamp: timestamp,
+            rawUsername: username,
+        });
+        if (_this.chatMessages.length > 100) {
+            _this.chatMessages.shift();
+        }
+        _this.updateChatMessagesList();
+        _this.showChatBubble(username, decodedUsername, message);
+    },
+    updateChatMessagesList: function () {
+        var _this = this;
+        var $list = $("#chatMessagesList");
+        $list.empty();
+        for (var i = 0; i < _this.chatMessages.length; i++) {
+            var msg = _this.chatMessages[i];
+            var time = new Date(msg.timestamp);
+            var timeStr = time.toLocaleTimeString();
+            var $msgItem = $(
+                '<div class="chat-message"><span class="chat-time">[' +
+                    timeStr +
+                    ']</span> <span class="chat-username">' +
+                    msg.username +
+                    ':</span> <span class="chat-text">' +
+                    DOMPurify.sanitize(msg.message) +
+                    "</span></div>",
+            );
+            $list.append($msgItem);
+        }
+        $list.scrollTop($list[0].scrollHeight);
+    },
+    showChatBubble: function (username, displayName, message) {
+        var _this = this;
+        if (_this.userChatBubbles[username]) {
+            _this.userChatBubbles[username].remove();
+        }
+        var $userBadge = _this.cursorContainer.find("." + username);
+        if ($userBadge.length === 0) {
+            return;
+        }
+        var bubbleHtml =
+            '<div class="chat-bubble" style="position:absolute; background:#fff; border:1px solid #ccc; border-radius:5px; padding:5px 8px; max-width:200px; word-wrap:break-word; font-size:0.9em; box-shadow:0 2px 5px rgba(0,0,0,0.2); z-index:1000;">' +
+            '<div style="font-weight:bold; margin-bottom:2px;">' +
+            DOMPurify.sanitize(displayName) +
+            "</div>" +
+            '<div style="color:#333;">' +
+            DOMPurify.sanitize(message) +
+            "</div>" +
+            '<div style="width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:6px solid #ccc; position:absolute; bottom:-6px; left:10px;"></div>' +
+            '<div style="width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:5px solid #fff; position:absolute; bottom:-5px; left:11px;"></div>' +
+            "</div>";
+        var $bubble = $(bubbleHtml);
+        $userBadge.append($bubble);
+        _this.userChatBubbles[username] = $bubble;
+        $bubble.css({
+            top: "-" + ($bubble.outerHeight() + 10) + "px",
+            left: "0px",
+        });
+        setTimeout(function () {
+            if (_this.userChatBubbles[username]) {
+                _this.userChatBubbles[username].fadeOut(500, function () {
+                    $(this).remove();
+                    delete _this.userChatBubbles[username];
+                });
+            }
+        }, 5000);
     },
 };
 

@@ -94,6 +94,21 @@
                 <button tool="circle" title="draw a circle" type="button" class="whiteboard-tool">
                     <i class="far fa-circle"></i>
                 </button>
+                <button tool="triangle" title="draw a triangle" type="button" class="whiteboard-tool">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button tool="star" title="draw a star" type="button" class="whiteboard-tool">
+                    <i class="fas fa-star"></i>
+                </button>
+                <button
+                    id="fillToggleBtn"
+                    style="display: none"
+                    title="Toggle fill (solid/hollow)"
+                    type="button"
+                    class="whiteboard-tool"
+                >
+                    <i class="fas fa-paint-brush"></i>
+                </button>
                 <button tool="eraser" title="take the eraser" type="button" class="whiteboard-tool">
                     <i class="fa fa-eraser"></i>
                 </button>
@@ -270,6 +285,9 @@
                 <button id="displayWhiteboardInfoBtn" title="Show whiteboard info" type="button">
                     <i class="fas fa-info-circle"></i>
                 </button>
+                <button id="displayChatBtn" title="Show chat messages" type="button">
+                    <i class="fas fa-comments"></i>
+                </button>
             </div>
 
             <div class="btn-group minGroup">
@@ -299,6 +317,21 @@
             <p>Smallest screen resolution: <i id="smallestScreenResolution">Unknown.</i></p>
             <p># msg. sent to server: <i id="messageSentCount">0</i></p>
             <p># msg. received from server: <i id="messageReceivedCount">0</i></p>
+        </div>
+
+        <div id="chatContainer" class="displayNone">
+            <p><b>Chat Messages:</b></p>
+            <div id="chatMessagesList"></div>
+        </div>
+
+        <div id="chatInputContainer" class="displayNone">
+            <div class="chatInputBox">
+                <textarea id="chatInputText" placeholder="Type your message..." rows="3"></textarea>
+                <div class="chatInputButtons">
+                    <button id="sendChatBtn" class="modalBtn">Send</button>
+                    <button id="cancelChatBtn" class="modalBtn">Cancel</button>
+                </div>
+            </div>
         </div>
 
         <div id="shareWhiteboardDialog" class="displayNone">
